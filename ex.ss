@@ -18,39 +18,34 @@
 ;; Our AST representation for a primitive operation
 (defstruct ($Prim Ast) (op args) transparent: #t)
 
-;; From SEXP to AST
-(def (sexp->Ast x)
-  (match x
-    ((? fixnum?) ($Fixnum #f x))
-    ([(? symbol? s) . args]
-     ($Prim #f s (map sexp->Ast args)))))
+;; Our AST representation for a whole program
+(defstruct ($Program Ast) (info exp) transparent: #t)
 
-;; From our AST to SEXP
-(def (Ast->sexp a)
-  (match a
-    (($Fixnum _ n) n)
-    (($Prim _ op args) `(,op ,@(map Ast->sexp args)))))
+;; Is the value a valid source-location, or #f ?
+(def (loc? l)
+  (or (eq? l #f) (source-location? l)))
 
-;; List of Primitives with which to compute
-;; Arity is fixed number of arguments (or in the future something richer?)
-(def Primitives (hash))
-(defrule (defprim name arity fun)
-  (hash-put! Primitives 'name (cons arity fun)))
-(defprim - 2 ##fx-)
-(defprim + 2 ##fx+)
+(def (read-fixnum (input (current-input-port)))
+  (def a (read input))
+  (unless (fixnum? a) (error "Not a fixnum" a))
+  a)
 
-(def (call-prim name args)
-  (match (hash-get Primitives name)
-    ([arity :: fun]
-     (unless (= arity (length args)) ;; TODO: richer arities
-       (error "Bad arity for primitive" name (length args)))
-     (apply fun args))
-    (#f (error "Unknown primitive" name))))
+(def (fx+/o x y)
+  (let (z (+ x y))
+    (if (fixnum? z) z (error "fixnum + overflow" x y))))
+(def fx-/o
+  (case-lambda
+    ((x y) (let (z (- x y)) (if (fixnum? z) z (error "fixnum - overflow" x y))))
+    ((x) (fx-/o 0 x))))
 
-(def (EvalAst a)
-  (match a
-    (($Fixnum _ n) n)
-    (($Prim _ op args) (call-prim op (map EvalAst args)))))
-
-(def (EvalSexp s)
-  (EvalAst (sexp->Ast s)))
+(def (match-args name arity args)
+  (def (errlen)
+    (error "Bad arity for primitive" name (length args)))
+  (match arity
+    ((? fixnum?)
+     (unless (= arity (length args)) (errlen))
+     args)
+    ([(? fixnum? min) :: (? fixnum? max)]
+     (unless (<= min (length args) max) (errlen))
+     args)
+    (else (error "Invalid arity" name arity))))
