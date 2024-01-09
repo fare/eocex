@@ -1,0 +1,2 @@
+(package: eocex
+ depend: ("github.com/mighty-gerbils/gerbil-utils"))

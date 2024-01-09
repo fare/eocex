@@ -1,0 +1,4 @@
+*** TODO figure out how to use Gerbil's native AST hierarchy!
+*** TODO create a parser that parses from string/port/buffer to AST with actual location
+*** TODO get this match pattern to work! Open Gerbil issue!
+(check (match '(Int 4) (`(Int ,n) n)) => 4)
