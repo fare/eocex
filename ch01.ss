@@ -85,8 +85,8 @@
     (($Prim loc op args)
      (let (pargs (map Lint-pe args))
        (cond
-        ((and (not (eq? op 'read)) (andmap $Fixnum? pargs))
-         ($Fixnum loc (call-prim op (map $Fixnum-value pargs))))
+        ((and (not (eq? op 'read)) (andmap $Fixnum? pargs)
+              (ignore-errors ($Fixnum loc (call-prim op (map $Fixnum-value pargs))))) => identity)
         ((andmap eq? args pargs)
          a)
         (else
