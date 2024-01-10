@@ -8,7 +8,6 @@ but using [Gerbil Scheme](https://cons.io) as the host language.
 
 ## Building and testing
 
-```
+```shell
 ./build.ss && gxtest ./...
-
 ```
