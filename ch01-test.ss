@@ -8,6 +8,7 @@
 (def ch01-test
   (test-suite "ch01"
     (test-case "Lint<-sexp"
+      (check (Lint<-sexp 42) => ($Program #f '() ($Fixnum #f 42)))
       (check (Lint<-sexp '(+ (read) (- 10 (- 5)))) =>
              ($Program #f '() ($Prim #f '+
                                      [($Prim #f 'read '())
@@ -17,15 +18,15 @@
              ($Program #f '() ($Prim #f '+
                                      [($Prim #f 'read '())
                                       ($Prim #f '- [($Fixnum #f 8)])]))))
-    (test-case "Lint-sexp?"
-      (check (Lint-sexp? '(+ 4 5)) => #t)
-      (check (Lint-sexp? '(- 4 5)) => #t)
-      (check (Lint-sexp? '(+ (read) (- 8))) => #t)
+    (test-case "Lint?"
+      (check (Lint? '(+ 4 5)) => #t)
+      (check (Lint? '(- 4 5)) => #t)
+      (check (Lint? '(+ (read) (- 8))) => #t)
 
-      (check (Lint-sexp? '(+ (read 1) (- 8))) => #f)
-      (check (Lint-sexp? '(* (read) (- 8))) => #f)
-      (check (Lint-sexp? '(+ 4 5 6)) => #f)
-      (check (Lint-sexp? '(- 4 5 7)) => #f))
+      (check (Lint? '(+ (read 1) (- 8))) => #f)
+      (check (Lint? '(* (read) (- 8))) => #f)
+      (check (Lint? '(+ 4 5 6)) => #f)
+      (check (Lint? '(- 4 5 7)) => #f))
     (test-case "Lint/eval and Lint/pe"
       (check (Lint/pe '(- (+ 3 (- 5)) (read))) => '(- -2 (read)))
       (def n 999999999999999999)

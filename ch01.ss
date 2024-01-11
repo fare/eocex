@@ -1,4 +1,9 @@
+;;; Our take on EOC Chapter 1
+;(include "ex.ss")
 (import
+  :gerbil/expander
+  :gerbil/core
+  <expander-runtime>
   :std/misc/list
   :std/sugar
   :eocex/ex)
@@ -6,8 +11,6 @@
 (export #t)
 
 ;;; Primitives
-(def Primitives (hash))
-(defrule (defprim name arity fun) (hash-put! Primitives 'name (cons arity fun)))
 
 ;; List of Primitives with which to compute
 ;; Arity is fixed number of arguments (or in the future something richer?)
@@ -15,38 +18,24 @@
 (defprim + 2 fx+/o) ;; overflow
 (defprim read 0 read-fixnum)
 
-
 ;;; Parsing
 
-;; From SEXP to AST
-(def (Lint/exp<-sexp x)
-  (match x
-    ((? fixnum?) ($Fixnum #f x))
-    ([(? symbol? op) . args]
-     (cond ((hash-get Primitives op)
-            => (lambda (af)
-                 (if (with-catch false (cut match-args op (car af) args))
-                   ($Prim #f op (map Lint/exp<-sexp args))
-                   (error "invalid arity" x))))
-           (else (error "invalid primitive" x))))
-    (else (error "invalid sexp" x))))
+;; From SEXP to our AST
+(def Lint<-sexp (Program<-sexp '(Fixnum Prim)))
 
-(def (Lint<-sexp s) ($Program #f '() (Lint/exp<-sexp s)))
+;; Need all dependencies defined at the right Phi:
+;;(defsyntax (Lint s) (datum->syntax s (Lint<-sexp s)))
 
 ;; From our AST to SEXP
-(def (sexp<-Lint/exp a)
+(def (stx<-Lint a)
   (match a
-    (($Fixnum _ (? fixnum? n)) n)
-    (($Prim _ op args) `(,op ,@(map sexp<-Lint/exp args)))
-    (else (error "invalid Lint exp ast" a))))
-
-(def (sexp<-Lint a)
-  (match a
-    (($Program _ _ exp) (sexp<-Lint/exp exp))
+    (($Program _ _ exp) (stx<-ast exp))
     (else (error "invalid Lint ast" a))))
 
+(def (sexp<-Lint a) (syntax->datum (stx<-Lint a)))
+
 ;; Recognizer for Lint Ast and Sexp
-(def (Lint? a)
+(def (Lint-ast? a)
   (def l?
     (match <>
       (($Fixnum (? loc?) (? fixnum?)) #t)
@@ -61,10 +50,13 @@
 (def (Lint-sexp? s)
   (with-catch false (cut Lint? (Lint<-sexp s))))
 
+(def (Lint? x)
+  (if (Ast? x) (Lint-ast? x) (Lint-sexp? x)))
+
 ;;; Evaluation
 (def (call-prim op args)
   (match (hash-get Primitives op)
-    ([arity :: fun]
+    ([arity fun]
      (apply fun (match-args op arity args)))
     (#f (error "Unknown primitive" op))))
 
