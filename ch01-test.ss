@@ -37,8 +37,11 @@
         (call-with-input-string "10 22 42" (lambda (p) (parameterize ((current-input-port p)) body ...))))
       (defrule (Lint/e exp) (begin/s (Lint/eval exp)))
       (defrule (checks (expr chk ...) ...)
-        (begin (check (Lint/e 'expr) chk ...) ...
-               (check (Lint/e (Lint/pe 'expr)) chk ...) ...))
+        (begin
+          (check (Lint? 'expr) => #t) ...
+          (check (sexp<-Lint (Lint<-sexp 'expr)) => 'expr) ...
+          (check (Lint/e 'expr) chk ...) ...
+          (check (Lint/e (Lint/pe 'expr)) chk ...) ...))
       (checks ((+ 10 32) => 42)
               ((+ 10 (- (+ 12 20))) => -22)
               ((+ 10 (- (+ 5 3))) => 2)

@@ -74,34 +74,6 @@
         runtime-value?: runtime-value?
         dekons: dekons))))
 
-(def (kons-immediate kons _ e) (kons (stx-e e)))
-(def Fixnum-args? (match <> ([(? fixnum?)] #t) (else #f)))
-(def (dekons-immediate kons v) (kons v))
-
-(defconstructor (Fixnum value)
-  fixnum? ;; parse-head ;; (Or Symbol (Fun Bool <- Sexp))
-  kons-immediate ;; parse-rec ;; (Fun A <- (Fun A <- Fields ...) (Fun Field <- Sexp) Sexp ...)
-  identity ;; unparse ;; (Fun Sexp <- Fields ...)
-  Fixnum-args? ;; runtime-inputs-valid? ;; (Fun Bool <- Inputs ...)
-  identity ;; kons ;; (Fun T <- ValidInputs ...)
-  fixnum? ;; runtime-value? ;; (Or (Fun Bool <- Any) TypeDescriptor)
-  dekons-immediate) ;; dekons ;; (Fun A <- (Fun A <- Fields ...) T)
-
-(defconstructor (Prim op args)
-  (match <> ([o . _] (hash-key? Primitives o)) (else #f))
-  (lambda (kons rec e)
-    (syntax-case e ()
-      ((o . a) (identifier? #'o)
-       (let (op (stx-e #'o))
-         (alet (af (hash-get Primitives op))
-           (kons op (match-args op (car af) (map rec (syntax->list #'a)))))))
-      (else #f)))
-  (lambda (op args) (cons op (map stx<-ast args)))
-  true ;; TODO: have input validator in Primitives
-  (lambda (o a) (apply (second (hash-get Primitives o)) a))
-  false
-  false)
-
 (def (Schema<-sexp/constructor K)
   (lambda (r x)
     (and (($Constructor-parse-head K) x)
