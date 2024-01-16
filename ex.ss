@@ -17,19 +17,37 @@
 (defrule (defprim name args ...)
   (hash-put! Primitives 'name (list args ...)))
 
+(def (match-args name arity args)
+  (def (errlen)
+    (error "Bad arity for primitive" name (length args)))
+  (match arity
+    ((? fixnum?)
+     (unless (= arity (length args)) (errlen))
+     args)
+    ([(? fixnum? min) :: (? fixnum? max)]
+     (unless (<= min (length args) max) (errlen))
+     args)
+    (else (error "Invalid arity" name arity))))
+
+(def (call-prim op args)
+  (match (hash-get Primitives op)
+    ([arity fun]
+     (apply fun (match-args op arity args)))
+    (#f (error "Unknown primitive" op))))
+
 ;; Our AST representation
 (defstruct Ast
-  (loc)
-  transparent: #t) ;; #f or Gambit-style location
+  (loc) ;; #f or Gambit-style location
+  transparent: #t)
 
-(defclass $Constructor ;; syntax with compile-time type C for runtime type T
+(defclass Constructor ;; syntax with compile-time type C for runtime type T
   (name ;; Symbol
    syntax-type ;; TypeDescriptor<C>
    make-syntax ;; (Fun C <- Inputs ...)
    syntax? ;; (Fun Bool <- Any)
    fields ;; (List Symbol)
-   parse-head ;; (Or Symbol (Fun Bool <- Sexp))
-   parse-rec ;; (Fun A <- (Fun A <- Fields ...) (Fun Field <- Sexp) Sexp ...)
+   parse-head ;; (Or Symbol (Fun Bool <- Stx))
+   parse-rec ;; (Fun A <- (Fun A <- Fields ...) (Fun Field <- Stx) Stx ...)
    unparse ;; (Fun Sexp <- (Fun Sexp <- Field) Fields ...)
    runtime-inputs-valid? ;; (Fun Bool <- Inputs ...)
    kons ;; (Fun T <- ValidInputs ...)
@@ -39,7 +57,7 @@
 (def Constructors (hash))
 
 (def (register-constructor name . args)
-  (hash-put! Constructors name (apply make-$Constructor name: name args)))
+  (hash-put! Constructors name (apply make-Constructor name: name args)))
 
 (defrule (defconstructor (Name fields ...)
            parse-head ;; (Or Symbol (Fun Bool <- Sexp))
@@ -50,21 +68,20 @@
            runtime-value? ;; (Or (Fun Bool <- Any) TypeDescriptor)
            dekons) ;; (Fun A <- (Fun A <- Fields ...) T)
   (with-id defconstructor
-      (($Name "$" #'Name)
-       ($Name::t "$" #'Name "::t")
-       ($Name? "$" #'Name "?")
+      ((Name::t #'Name "::t")
+       (Name? #'Name "?")
        (runtime "runtime-" #'Name)
-       (make-$Name "make-$" #'Name))
+       (make-Name "make-" #'Name))
     (begin
-      (defstruct ($Name Ast) (fields ...) transparent: #t)
-      (def (apply-f e f) (with (($Name ast fields ...) e) (f fields ...)))
-      (defmethod {:apply $Name} apply-f)
-      (defmethod {:unparse $Name}
+      (defstruct (Name Ast) (fields ...) transparent: #t)
+      (def (apply-f e f) (with ((Name ast fields ...) e) (f fields ...)))
+      (defmethod {:apply Name} apply-f)
+      (defmethod {:unparse Name}
         (lambda (x) (make-AST (apply-f x unparse) (Ast-loc x))))
       (register-constructor 'Name
-        syntax-type: $Name::t
-        make-syntax: make-$Name
-        syntax?: $Name?
+        syntax-type: Name::t
+        make-syntax: make-Name
+        syntax?: Name?
         fields: '(fields ...)
         parse-head: parse-head
         parse-rec: parse-rec
@@ -74,27 +91,27 @@
         runtime-value?: runtime-value?
         dekons: dekons))))
 
-(def (Schema<-sexp/constructor K)
+(def (Schema<-stx/constructor K)
   (lambda (r x)
-    (and (($Constructor-parse-head K) x)
-         (($Constructor-parse-rec K)
-          (lambda a (apply ($Constructor-make-syntax K) (stx-source x) a))
+    (and ((Constructor-parse-head K) (stx-e x))
+         ((Constructor-parse-rec K)
+          (lambda a (apply (Constructor-make-syntax K) (stx-source x) a))
           r x))))
 
-(def (Schema<-sexp constructors)
-  (def fs (map (compose Schema<-sexp/constructor (cut hash-get Constructors <>))
+(def (Schema<-stx constructors)
+  (def fs (map (compose Schema<-stx/constructor (cut hash-get Constructors <>))
                constructors))
   (def (S x) (ormap (cut <> S x) fs))
   S)
 
-(def (Program<-sexp constructors)
-  (let (S (Schema<-sexp constructors))
-    (lambda (s) (let (exp (S s)) ($Program (stx-source s) '() exp)))))
+(def (Program<-stx constructors)
+  (let (S (Schema<-stx constructors))
+    (lambda (s) (let (exp (S s)) (Program (stx-source s) '() exp)))))
 
 (def (stx<-ast x) {:unparse x})
 
 ;; Our AST representation for a whole program
-(defstruct ($Program Ast) (info exp) transparent: #t)
+(defstruct (Program Ast) (info exp) transparent: #t)
 
 ;; Is the value a valid source-location, or #f ?
 (def (loc? l)
@@ -150,15 +167,3 @@
   (case-lambda
     ((x y) (let (z (- x y)) (if (fixnum? z) z (error "fixnum - overflow" x y))))
     ((x) (fx-/o 0 x))))
-
-(def (match-args name arity args)
-  (def (errlen)
-    (error "Bad arity for primitive" name (length args)))
-  (match arity
-    ((? fixnum?)
-     (unless (= arity (length args)) (errlen))
-     args)
-    ([(? fixnum? min) :: (? fixnum? max)]
-     (unless (<= min (length args) max) (errlen))
-     args)
-    (else (error "Invalid arity" name arity))))

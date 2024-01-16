@@ -26,8 +26,8 @@
 (def (dekons-immediate kons v) (kons v))
 
 (defconstructor (Fixnum value)
-  fixnum? ;; parse-head ;; (Or Symbol (Fun Bool <- Sexp))
-  kons-immediate ;; parse-rec ;; (Fun A <- (Fun A <- Fields ...) (Fun Field <- Sexp) Sexp ...)
+  fixnum? ;; parse-head ;; (Or Symbol (Fun Bool <- Stx))
+  kons-immediate ;; parse-rec ;; (Fun A <- (Fun A <- Fields ...) (Fun Field <- Stx) Stx ...)
   identity ;; unparse ;; (Fun Sexp <- Fields ...)
   Fixnum-args? ;; runtime-inputs-valid? ;; (Fun Bool <- Inputs ...)
   identity ;; kons ;; (Fun T <- ValidInputs ...)
@@ -35,7 +35,7 @@
   dekons-immediate) ;; dekons ;; (Fun A <- (Fun A <- Fields ...) T)
 
 (defconstructor (Prim op args)
-  (match <> ([o . _] (hash-key? Primitives o)) (else #f))
+  (match <> ([o . _] (hash-key? Primitives (stx-e o))) (else #f))
   (lambda (kons rec e)
     (syntax-case e ()
       ((o . a) (identifier? #'o)
@@ -52,15 +52,15 @@
 ;;; Parsing
 
 ;; From SEXP to our AST
-(def Lint<-sexp (Program<-sexp '(Fixnum Prim)))
+(def Lint<-stx (Program<-stx '(Fixnum Prim)))
 
 ;; Need all dependencies defined at the right Phi:
-;;(defsyntax (Lint s) (datum->syntax s (Lint<-sexp s)))
+;;(defsyntax (Lint s) (datum->syntax s (Lint<-stx s)))
 
 ;; From our AST to SEXP
 (def (stx<-Lint a)
   (match a
-    (($Program _ _ exp) (stx<-ast exp))
+    ((Program _ _ exp) (stx<-ast exp))
     (else (error "invalid Lint ast" a))))
 
 (def (sexp<-Lint a) (syntax->datum (stx<-Lint a)))
@@ -69,53 +69,47 @@
 (def (Lint-ast? a)
   (def l?
     (match <>
-      (($Fixnum (? loc?) (? fixnum?)) #t)
-      (($Prim (? loc?) op args)
+      ((Fixnum (? loc?) (? fixnum?)) #t)
+      ((Prim (? loc?) op args)
        (alet (af (hash-get Primitives op))
          (and (with-catch false (cut match-args op (car af) args))
               (andmap l? args))))
       (else #f)))
-  (match a (($Program (? loc?) [] exp) (l? exp))
+  (match a ((Program (? loc?) [] exp) (l? exp))
          (else #f)))
 
 (def (Lint-sexp? s)
-  (with-catch false (cut Lint? (Lint<-sexp s))))
+  (with-catch false (cut Lint? (Lint<-stx s))))
 
 (def (Lint? x)
   (if (Ast? x) (Lint-ast? x) (Lint-sexp? x)))
 
 ;;; Evaluation
-(def (call-prim op args)
-  (match (hash-get Primitives op)
-    ([arity fun]
-     (apply fun (match-args op arity args)))
-    (#f (error "Unknown primitive" op))))
-
 (def (Lint-eval a)
   (match a
-    (($Fixnum _ n) (unless (fixnum? n) (error "not a fixnum" n)) n)
-    (($Prim _ op args) (call-prim op (map Lint-eval args)))
-    (($Program _ _ exp) (Lint-eval exp))))
+    ((Fixnum _ n) (unless (fixnum? n) (error "not a fixnum" n)) n)
+    ((Prim _ op args) (call-prim op (map Lint-eval args)))
+    ((Program _ _ exp) (Lint-eval exp))))
 
 (def (Lint/eval s)
-  (Lint-eval (Lint<-sexp s)))
+  (Lint-eval (Lint<-stx s)))
 
 
 ;;; Partial Evaluation
 (def (Lint-pe a)
   (match a
-    (($Fixnum _ _) a)
-    (($Prim loc op args)
+    ((Fixnum _ _) a)
+    ((Prim loc op args)
      (let (pargs (map Lint-pe args))
        (cond
-        ((and (not (eq? op 'read)) (andmap $Fixnum? pargs)
-              (ignore-errors ($Fixnum loc (call-prim op (map $Fixnum-value pargs))))) => identity)
+        ((and (not (eq? op 'read)) (andmap Fixnum? pargs)
+              (ignore-errors (Fixnum loc (call-prim op (map Fixnum-value pargs))))) => identity)
         ((andmap eq? args pargs)
          a)
         (else
-         ($Prim loc op pargs)))))
-    (($Program loc info exp)
-     ($Program loc info (Lint-pe exp)))))
+         (Prim loc op pargs)))))
+    ((Program loc info exp)
+     (Program loc info (Lint-pe exp)))))
 
 (def (Lint/pe s)
-  (sexp<-Lint (Lint-pe (Lint<-sexp s))))
+  (sexp<-Lint (Lint-pe (Lint<-stx s))))

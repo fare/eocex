@@ -7,17 +7,17 @@
 
 (def ch01-test
   (test-suite "ch01"
-    (test-case "Lint<-sexp"
-      (check (Lint<-sexp 42) => ($Program #f '() ($Fixnum #f 42)))
-      (check (Lint<-sexp '(+ (read) (- 10 (- 5)))) =>
-             ($Program #f '() ($Prim #f '+
-                                     [($Prim #f 'read '())
-                                      ($Prim #f '- [($Fixnum #f 10)
-                                                    ($Prim #f '- [($Fixnum #f 5)])])])))
-      (check (Lint<-sexp '(+ (read) (- 8))) =>
-             ($Program #f '() ($Prim #f '+
-                                     [($Prim #f 'read '())
-                                      ($Prim #f '- [($Fixnum #f 8)])]))))
+    (test-case "Lint<-stx"
+      (check (Lint<-stx 42) => (Program #f '() (Fixnum #f 42)))
+      (check (Lint<-stx '(+ (read) (- 10 (- 5)))) =>
+             (Program #f '() (Prim #f '+
+                                     [(Prim #f 'read '())
+                                      (Prim #f '- [(Fixnum #f 10)
+                                                    (Prim #f '- [(Fixnum #f 5)])])])))
+      (check (Lint<-stx '(+ (read) (- 8))) =>
+             (Program #f '() (Prim #f '+
+                                     [(Prim #f 'read '())
+                                      (Prim #f '- [(Fixnum #f 8)])]))))
     (test-case "Lint?"
       (check (Lint? '(+ 4 5)) => #t)
       (check (Lint? '(- 4 5)) => #t)
@@ -39,7 +39,7 @@
       (defrule (checks (expr chk ...) ...)
         (begin
           (check (Lint? 'expr) => #t) ...
-          (check (sexp<-Lint (Lint<-sexp 'expr)) => 'expr) ...
+          (check (sexp<-Lint (Lint<-stx 'expr)) => 'expr) ...
           (check (Lint/e 'expr) chk ...) ...
           (check (Lint/e (Lint/pe 'expr)) chk ...) ...))
       (checks ((+ 10 32) => 42)
