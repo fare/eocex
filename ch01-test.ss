@@ -31,11 +31,11 @@
       (check (Lint/pe '(- (+ 3 (- 5)) (read))) => '(- -2 (read)))
       (def n 999999999999999999)
       (def overflow `(+ (+ (+ ,n ,n) (+ ,n ,n)) (+ (+ ,n ,n) (+ ,n ,n))))
-      (check-exception (Lint/eval overflow) true)
+      (check-exception (Lint/eval Lint-eval '() overflow) true)
       (check (Lint/pe overflow) => '(+ (+ 1999999999999999998 1999999999999999998) (+ 1999999999999999998 1999999999999999998)))
       (defrule (begin/s body ...)
         (call-with-input-string "10 22 42" (lambda (p) (parameterize ((current-input-port p)) body ...))))
-      (defrule (Lint/e exp) (begin/s (Lint/eval exp)))
+      (defrule (Lint/e exp) (begin/s (Lint/eval Lint-eval '() exp)))
       (defrule (checks (expr chk ...) ...)
         (begin
           (check (Lint? 'expr) => #t) ...

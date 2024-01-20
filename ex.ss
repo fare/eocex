@@ -48,7 +48,7 @@
    fields ;; (List Symbol)
    parse-head ;; (Or Symbol (Fun Bool <- Stx))
    parse-rec ;; (Fun A <- (Fun A <- Fields ...) (Fun Field <- Stx) Stx ...)
-   unparse ;; (Fun Sexp <- (Fun Sexp <- Field) Fields ...)
+   unparse* ;; (Fun Sexp <- (Fun Sexp <- Field) Fields ...)
    runtime-inputs-valid? ;; (Fun Bool <- Inputs ...)
    kons ;; (Fun T <- ValidInputs ...)
    runtime-value? ;; (Or (Fun Bool <- Any) TypeDescriptor)
@@ -62,7 +62,7 @@
 (defrule (defconstructor (Name fields ...)
            parse-head ;; (Or Symbol (Fun Bool <- Sexp))
            parse-rec ;; (Fun A <- (Fun A <- Fields ...) (Fun Field <- Sexp) Sexp ...)
-           unparse ;; (Fun Sexp <- Fields ...)
+           unparse* ;; (Fun Sexp <- Fields ...)
            runtime-inputs-valid? ;; (Fun Bool <- Inputs ...)
            kons ;; (Fun T <- ValidInputs ...)
            runtime-value? ;; (Or (Fun Bool <- Any) TypeDescriptor)
@@ -77,7 +77,7 @@
       (def (apply-f e f) (with ((Name ast fields ...) e) (f fields ...)))
       (defmethod {:apply Name} apply-f)
       (defmethod {:unparse Name}
-        (lambda (x) (make-AST (apply-f x unparse) (Ast-loc x))))
+        (lambda (x) (make-AST (apply-f x unparse*) (Ast-loc x))))
       (register-constructor 'Name
         syntax-type: Name::t
         make-syntax: make-Name
@@ -85,7 +85,7 @@
         fields: '(fields ...)
         parse-head: parse-head
         parse-rec: parse-rec
-        unparse: unparse
+        unparse*: unparse*
         runtime-inputs-valid?: runtime-inputs-valid?
         kons: kons
         runtime-value?: runtime-value?
@@ -108,7 +108,8 @@
   (let (S (Schema<-stx constructors))
     (lambda (s) (let (exp (S s)) (Program (stx-source s) '() exp)))))
 
-(def (stx<-ast x) {:unparse x})
+;; : stx <- ast
+(def (unparse x) {:unparse x})
 
 ;; Our AST representation for a whole program
 (defstruct (Program Ast) (info exp) transparent: #t)
@@ -167,3 +168,6 @@
   (case-lambda
     ((x y) (let (z (- x y)) (if (fixnum? z) z (error "fixnum - overflow" x y))))
     ((x) (fx-/o 0 x))))
+
+(def (list?<- . a)
+  (lambda (x) (and (list? x) (length=? x a) (andmap a x))))

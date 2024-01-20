@@ -40,3 +40,21 @@
          (lambda (path.exe)
            (link path.exe path.o)
            (run-prog path.exe))))))))
+
+(def N "\n")
+
+(def (%%start)
+  [".globl _start" N
+   ".text" N
+   "_start:" N])
+(def (%%success-exit)
+  ["movq $60, %rax" N ;; sys_exit
+   "movq $0,%rdi" N ;; success
+   "syscall" N])
+(def (%%writeq)
+  ["pushq %rax" N
+   "movq $1, %rax" N ;; sys_write
+   "movq %rsp, %rsi" N ;; buffer
+   "movq $8, %rdx" N ;; length
+   "syscall" N
+   "popq %rsi" N])

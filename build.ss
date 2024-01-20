@@ -9,4 +9,5 @@
 (import :std/build-script)
 
 (defbuild-script
-  `("ex.ss" "ch01.ss" "asx86-64.ss"))
+  `("ex.ss" "asx86-64.ss"
+    "ch01.ss" #;"ch02.ss"))

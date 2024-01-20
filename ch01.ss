@@ -7,6 +7,7 @@
   :std/misc/list
   :std/srfi/1
   :std/sugar
+  ;;:clan/poo/object :clan/poo/brace
   :eocex/ex)
 
 (export #t)
@@ -22,7 +23,7 @@
 ;;; Syntactic Constructors
 
 (def (kons-immediate kons _ e) (kons (stx-e e)))
-(def Fixnum-args? (match <> ([(? fixnum?)] #t) (else #f)))
+(def Fixnum-args? (list?<- fixnum?))
 (def (dekons-immediate kons v) (kons v))
 
 (defconstructor (Fixnum value)
@@ -43,7 +44,7 @@
          (alet (af (hash-get Primitives op))
            (kons op (match-args op (car af) (map rec (syntax->list #'a)))))))
       (else #f)))
-  (lambda (op args) (cons op (map stx<-ast args)))
+  (lambda (op args) (cons op (map unparse args)))
   true ;; TODO: have input validator in Primitives
   (lambda (o a) (apply (second (hash-get Primitives o)) a))
   false
@@ -60,7 +61,7 @@
 ;; From our AST to SEXP
 (def (stx<-Lint a)
   (match a
-    ((Program _ _ exp) (stx<-ast exp))
+    ((Program _ _ exp) (unparse exp))
     (else (error "invalid Lint ast" a))))
 
 (def (sexp<-Lint a) (syntax->datum (stx<-Lint a)))
@@ -85,14 +86,14 @@
   (if (Ast? x) (Lint-ast? x) (Lint-sexp? x)))
 
 ;;; Evaluation
-(def (Lint-eval a)
+(def (Lint-eval eval env a)
   (match a
     ((Fixnum _ n) (unless (fixnum? n) (error "not a fixnum" n)) n)
-    ((Prim _ op args) (call-prim op (map Lint-eval args)))
-    ((Program _ _ exp) (Lint-eval exp))))
+    ((Prim _ op args) (call-prim op (map (cut eval eval env <>) args)))
+    ((Program _ _ exp) (eval eval env exp))))
 
-(def (Lint/eval s)
-  (Lint-eval (Lint<-stx s)))
+(def (Lint/eval eval env s)
+  (Lint-eval eval env (Lint<-stx s)))
 
 
 ;;; Partial Evaluation
