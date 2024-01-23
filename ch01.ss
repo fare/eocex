@@ -8,7 +8,8 @@
   :std/srfi/1
   :std/sugar
   ;;:clan/poo/object :clan/poo/brace
-  :eocex/ex)
+  ./metastx
+  ./primitives)
 
 (export #t)
 
@@ -27,29 +28,32 @@
 (def (dekons-immediate kons v) (kons v))
 
 (defconstructor (Fixnum value)
-  fixnum? ;; parse-head ;; (Or Symbol (Fun Bool <- Stx))
-  kons-immediate ;; parse-rec ;; (Fun A <- (Fun A <- Fields ...) (Fun Field <- Stx) Stx ...)
-  identity ;; unparse ;; (Fun Sexp <- Fields ...)
-  Fixnum-args? ;; runtime-inputs-valid? ;; (Fun Bool <- Inputs ...)
-  identity ;; kons ;; (Fun T <- ValidInputs ...)
-  fixnum? ;; runtime-value? ;; (Or (Fun Bool <- Any) TypeDescriptor)
-  dekons-immediate) ;; dekons ;; (Fun A <- (Fun A <- Fields ...) T)
+  parse-head: fixnum? ;; (Or Symbol (Fun Bool <- Stx))
+  parse-rec: kons-immediate ;; (Fun A <- (Fun A <- Fields ...) (Fun Field <- Stx) Stx ...)
+  unparse*: identity ;; (Fun Sexp <- Fields ...)
+  runtime-inputs-valid?: Fixnum-args? ;; (Fun Bool <- Inputs ...)
+  kons: identity ;; (Fun T <- ValidInputs ...)
+  runtime-value?: fixnum? ;; (Or (Fun Bool <- Any) TypeDescriptor)
+  dekons: dekons-immediate) ;; (Fun A <- (Fun A <- Fields ...) T)
 
 (defconstructor (Prim op args)
-  (match <> ([o . _] (hash-key? Primitives (stx-e o))) (else #f))
+  parse-head: (match <> ([o . _] (hash-key? (Primitives) (stx-e o))) (else #f))
+  parse-rec:
   (lambda (kons rec e)
     (syntax-case e ()
       ((o . a) (identifier? #'o)
        (let (op (stx-e #'o))
-         (alet (af (hash-get Primitives op))
+         (alet (af (hash-get (Primitives) op))
            (kons op (match-args op (car af) (map rec (syntax->list #'a)))))))
       (else #f)))
-  (lambda (op args) (cons op (map unparse args)))
-  true ;; TODO: have input validator in Primitives
-  (lambda (o a) (apply (second (hash-get Primitives o)) a))
-  false
-  false)
+  unparse*: (lambda (op args) (cons op (map unparse args)))
+  runtime-inputs-valid?: true ;; TODO: have input validator in Primitives
+  kons: (lambda (o a) (apply (second (hash-get (Primitives) o)) a))
+  runtime-value?: false
+  dekons: false)
 
+
+;;; Language
 ;;; Parsing
 
 ;; From SEXP to our AST
@@ -72,7 +76,7 @@
     (match <>
       ((Fixnum (? loc?) (? fixnum?)) #t)
       ((Prim (? loc?) op args)
-       (alet (af (hash-get Primitives op))
+       (alet (af (hash-get (Primitives) op))
          (and (with-catch false (cut match-args op (car af) args))
               (andmap l? args))))
       (else #f)))

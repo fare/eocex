@@ -1,7 +1,8 @@
 (import
   :std/sugar
   :std/test
-  ./ex
+  ./metastx
+  ./primitives
   ./ch01)
 (export ch01-test)
 

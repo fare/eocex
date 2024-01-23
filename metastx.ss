@@ -7,33 +7,10 @@
   :std/misc/func
   :std/misc/list
   :std/srfi/1
-  :std/srfi/141
+  (only-in :std/srfi/141 floor/)
   :std/sugar)
 
 (export #t) ;; for now
-
-;;; Primitives
-(def Primitives (hash))
-(defrule (defprim name args ...)
-  (hash-put! Primitives 'name (list args ...)))
-
-(def (match-args name arity args)
-  (def (errlen)
-    (error "Bad arity for primitive" name (length args)))
-  (match arity
-    ((? fixnum?)
-     (unless (= arity (length args)) (errlen))
-     args)
-    ([(? fixnum? min) :: (? fixnum? max)]
-     (unless (<= min (length args) max) (errlen))
-     args)
-    (else (error "Invalid arity" name arity))))
-
-(def (call-prim op args)
-  (match (hash-get Primitives op)
-    ([arity fun]
-     (apply fun (match-args op arity args)))
-    (#f (error "Unknown primitive" op))))
 
 ;; Our AST representation
 (defstruct Ast
@@ -60,13 +37,7 @@
   (hash-put! Constructors name (apply make-Constructor name: name args)))
 
 (defrule (defconstructor (Name fields ...)
-           parse-head ;; (Or Symbol (Fun Bool <- Sexp))
-           parse-rec ;; (Fun A <- (Fun A <- Fields ...) (Fun Field <- Sexp) Sexp ...)
-           unparse* ;; (Fun Sexp <- Fields ...)
-           runtime-inputs-valid? ;; (Fun Bool <- Inputs ...)
-           kons ;; (Fun T <- ValidInputs ...)
-           runtime-value? ;; (Or (Fun Bool <- Any) TypeDescriptor)
-           dekons) ;; (Fun A <- (Fun A <- Fields ...) T)
+           constructor-inits ...)
   (with-id defconstructor
       ((Name::t #'Name "::t")
        (Name? #'Name "?")
@@ -74,22 +45,17 @@
        (make-Name "make-" #'Name))
     (begin
       (defstruct (Name Ast) (fields ...) transparent: #t)
-      (def (apply-f e f) (with ((Name ast fields ...) e) (f fields ...)))
-      (defmethod {:apply Name} apply-f)
-      (defmethod {:unparse Name}
-        (lambda (x) (make-AST (apply-f x unparse*) (Ast-loc x))))
       (register-constructor 'Name
         syntax-type: Name::t
         make-syntax: make-Name
         syntax?: Name?
         fields: '(fields ...)
-        parse-head: parse-head
-        parse-rec: parse-rec
-        unparse*: unparse*
-        runtime-inputs-valid?: runtime-inputs-valid?
-        kons: kons
-        runtime-value?: runtime-value?
-        dekons: dekons))))
+        constructor-inits ...)
+      (def (apply-f e f) (with ((Name ast fields ...) e) (f fields ...)))
+      (defmethod {:apply Name} apply-f)
+      (defmethod {:unparse Name}
+        (let (unparse* (Constructor-unparse* (hash-get Constructors 'Name)))
+          (lambda (x) (make-AST (apply-f x unparse*) (Ast-loc x))))))))
 
 (def (Schema<-stx/constructor K)
   (lambda (r x)
@@ -110,6 +76,9 @@
 
 ;; : stx <- ast
 (def (unparse x) {:unparse x})
+
+;; Define a prototype for a language done our way... ?
+;;(def Lang {})
 
 ;; Our AST representation for a whole program
 (defstruct (Program Ast) (info exp) transparent: #t)
@@ -155,19 +124,6 @@
         (if (equal? src1 src2)
           (vector src1 (minpos start1 start2) (maxpos end1 end2))
           (vector src1 start1 end1)))))))
-
-(def (read-fixnum (input (current-input-port)))
-  (def a (read input))
-  (unless (fixnum? a) (error "Not a fixnum" a))
-  a)
-
-(def (fx+/o x y)
-  (let (z (+ x y))
-    (if (fixnum? z) z (error "fixnum + overflow" x y))))
-(def fx-/o
-  (case-lambda
-    ((x y) (let (z (- x y)) (if (fixnum? z) z (error "fixnum - overflow" x y))))
-    ((x) (fx-/o 0 x))))
 
 (def (list?<- . a)
   (lambda (x) (and (list? x) (length=? x a) (andmap a x))))
