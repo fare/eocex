@@ -4,18 +4,60 @@
   :gerbil/core
   :gerbil/expander
   :std/debug/DBG
-  :std/misc/func
+  :std/error
+  ;;:std/misc/func
   :std/misc/list
   :std/srfi/1
   (only-in :std/srfi/141 floor/)
-  :std/sugar)
+  :std/sugar
+  :clan/base
+  :clan/poo/object
+  ;;:clan/poo/brace
+  :clan/poo/mop
+  :clan/poo/type
+  )
 
 (export #t) ;; for now
 
-;; Our AST representation
+;; Base class for our AST representation
 (defstruct Ast
   (loc) ;; #f or Gambit-style location
   transparent: #t)
+
+(defclass (NotConstant Exception) () transparent: #t)
+
+(define-type (Value. [Type.])
+  name: 'Value.
+  lift: undefined ;; (Fun T <- V) ;; Term from Value
+  lower: undefined ;; (Fun V <- T) ;; lower a *constant* Term into a Value
+  )
+
+;; Term, Non-Terminal
+(define-type (Language. [Type.])
+  name: undefined ;; Symbol ;; name of the language
+  parse: undefined ;; (Fun T <- Stx) ;; parse a Scheme syntax object into a language structure
+  unparse: undefined ;; (Fun Stx <- T) ;; unparse a language structure into a Scheme syntax object
+  eval: undefined) ;; (Fun Any <- T Ctx ...) ;; evaluate an expression with extra context
+
+;; TODO:
+;; - support have several syntactic categories (grammar non-terminals)
+;; - support validation of constructed terms (?)
+;; - support open mutual recursion of terms through a main grammar / language object
+#;(define-type Constructor* ;; syntax with compile-time type C for runtime type T
+  (class-descriptor: undefined ;; TypeDescriptor<C> ;; type descriptor for the constructor
+   make: undefined ;; (Fun C <- Inputs ...) ;; function to make the ast node
+   fields: ;; (List Symbol) ;; list of fields of the ast node ; or get it from the class descriptor?
+   unparse*: ;; (Fun Stx <- (Fun Stx <- Field) Fields ...) ;; from constructor term back to stx/sexp
+   unparse: (lambda (x) (make-AST (apply-f x unparse*) (Ast-loc x)))))
+#;(def (apply-f e f) (with ((Name ast fields ...) e) (f fields ...)))
+
+#;
+(define-type Constructor* ;; syntax with compile-time type C for runtime type T
+   ;; THE following are for constructors that correspond to runtime data structures
+   runtime-inputs-valid? ;; (Fun Bool <- Inputs ...) ;; validate arguments for kons
+   kons ;; (Fun T <- ValidInputs ...) ;; runtime constructor
+   runtime-value? ;; (Or (Fun Bool <- Any) TypeDescriptor) ;; validate element of the runtime datatype
+   dekons) ;; (Fun A <- (Fun A <- Fields ...) T) ;; lift a runtime value into syntax
 
 (defclass Constructor ;; syntax with compile-time type C for runtime type T
   (name ;; Symbol
@@ -31,6 +73,7 @@
    runtime-value? ;; (Or (Fun Bool <- Any) TypeDescriptor)
    dekons) ;; (Fun A <- (Fun A <- Fields ...) T)
   transparent: #t)
+
 (def Constructors (hash))
 
 (def (register-constructor name . args)

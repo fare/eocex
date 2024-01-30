@@ -9,5 +9,5 @@
 (import :std/build-script)
 
 (defbuild-script
-  `("metastx.ss" "primitives" "asx86-64.ss"
+  `("languages" "primitives" "asx86-64"
     "ch01.ss" #;"ch02.ss"))

@@ -47,7 +47,7 @@
 ;;; Parsing
 
 ;; From SEXP to our AST
-(def Lvar<-sexp (Program<-sexp '(Fixnum Prim)))
+(def Lvar<-sexp (Program<-sexp '(Fixnum Prim Var Let1 LetN)))
 
 ;; Need all dependencies defined at the right Phi:
 ;;(defsyntax (Lvar s) (datum->syntax s (Lvar<-sexp s)))
