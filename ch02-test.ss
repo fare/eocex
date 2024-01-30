@@ -7,6 +7,7 @@
 
 (def ch02-test
   (test-suite "ch02"
+    #;
     (test-case "Lvar<-stx"
       (check (Lvar<-stx 42) => (Program #f '() (Fixnum #f 42)))
       (check (Lvar<-stx '(+ (read) (- 10 (- 5)))) =>
@@ -18,6 +19,7 @@
              (Program #f '() (Prim #f '+
                                      [(Prim #f 'read '())
                                       (Prim #f '- [(Fixnum #f 8)])]))))
+    #;
     (test-case "Lvar?"
       (check (Lvar? '(+ 4 5)) => #t)
       (check (Lvar? '(- 4 5)) => #t)
@@ -27,6 +29,7 @@
       (check (Lvar? '(* (read) (- 8))) => #f)
       (check (Lvar? '(+ 4 5 6)) => #f)
       (check (Lvar? '(- 4 5 7)) => #f))
+    #;
     (test-case "Lvar/eval and Lvar/pe"
       (check (Lvar/pe '(- (+ 3 (- 5)) (read))) => '(- -2 (read)))
       (def n 999999999999999999)

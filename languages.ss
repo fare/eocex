@@ -1,5 +1,4 @@
 (import
-  <expander-runtime>
   (phi: -1 :gerbil/core)
   :gerbil/core
   :gerbil/expander
@@ -14,8 +13,7 @@
   :clan/poo/object
   ;;:clan/poo/brace
   :clan/poo/mop
-  :clan/poo/type
-  )
+  :clan/poo/type)
 
 (export #t) ;; for now
 

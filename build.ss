@@ -10,4 +10,4 @@
 
 (defbuild-script
   `("languages" "primitives" "asx86-64"
-    "ch01.ss" #;"ch02.ss"))
+    "ch01.ss" "ch02.ss"))

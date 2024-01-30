@@ -6,7 +6,8 @@
   :gerbil/core
   :std/misc/list
   :std/sugar
-  :eocex/ex
+  :eocex/languages
+  :eocex/primitives
   :eocex/ch01)
 
 (export #t)
@@ -32,7 +33,7 @@
     (syntax-case e (let)
       ((let (x v) body ...) (identifier? #'x)
        (kons (rec #'x) (rec #'v) (stx-map rec #'(body ...))))))
-  (lambda (x v body) `(let (,(unparse x) ,(unparse v))) ,@(map unparse body))
+  (lambda (x v body) `(let (,(unparse x) ,(unparse v)) ,@(map unparse body)))
   false false)
 
 (defconstructor (LetN bindings body)
@@ -41,14 +42,15 @@
     (syntax-case e (let)
       ((let ((x v) ...) body ...)
        (kons (stx-map (cut stx-map rec <>) #'(x ...) #'(v ...)) (stx-map rec #'(body ...))))))
-  (lambda (x v body) `(let (,(unparse x) ,(unparse v))) ,@(map unparse body))
+  (lambda (xs vs body) `(let (map ,(lambda (x v) (list (unparse x) (unparse v))) xs vs) ,@(map unparse body)))
   false false)
 
 ;;; Parsing
 
 ;; From SEXP to our AST
-(def Lvar<-sexp (Program<-sexp '(Fixnum Prim Var Let1 LetN)))
+(def Lvar<-stx (Program<-stx '(Fixnum Prim Var Let1 LetN)))
 
+#|
 ;; Need all dependencies defined at the right Phi:
 ;;(defsyntax (Lvar s) (datum->syntax s (Lvar<-sexp s)))
 
@@ -114,3 +116,4 @@
 
 (def (Lvar/pe s)
   (sexp<-Lvar (Lvar-pe (Lvar<-sexp s))))
+|#

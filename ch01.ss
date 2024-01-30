@@ -1,8 +1,6 @@
 ;;; Our take on EOC Chapter 1
 (import
-  <expander-runtime>
   (phi: -1 :gerbil/core)
-  :gerbil/expander
   :gerbil/core
   :std/misc/list
   :std/srfi/1
