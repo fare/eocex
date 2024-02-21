@@ -6,6 +6,7 @@
   :gerbil/core
   :std/misc/list
   :std/sugar
+  :clan/base
   :eocex/languages
   :eocex/primitives
   :eocex/ch01)
@@ -18,14 +19,17 @@
 
 (def Var-args? (list?<- symbol?))
 
+#|
 (defconstructor (Var name) ;; Var id ?
   symbol? ;; parse-head ;; (Or Symbol (Fun Bool <- Sexp))
   kons-immediate ;; parse-rec ;; (Fun A <- (Fun A <- Fields ...) (Fun Field <- Sexp) Sexp ...)
   identity ;; unparse ;; (Fun Sexp <- Fields ...)
-  Var-args? ;; runtime-inputs-valid? ;; (Fun Bool <- Inputs ...)
-  identity ;; kons ;; (Fun T <- ValidInputs ...)
-  symbol? ;; runtime-value? ;; (Or (Fun Bool <- Any) TypeDescriptor)
-  dekons-immediate) ;; dekons ;; (Fun A <- (Fun A <- Fields ...) T)
+  false undefined false undefined)
+
+;;  Var-args? ;; runtime-inputs-valid? ;; (Fun Bool <- Inputs ...)
+;;  identity ;; kons ;; (Fun T <- ValidInputs ...)
+;;  symbol? ;; runtime-value? ;; (Or (Fun Bool <- Any) TypeDescriptor)
+;;  dekons-immediate) ;; dekons ;; (Fun A <- (Fun A <- Fields ...) T)
 
 (defconstructor (Let1 x v body)
   (lambda (e) (syntax-case e (let) ((let (x v) body ...) (identifier? #'x) #t) (else #f)))
@@ -50,7 +54,6 @@
 ;; From SEXP to our AST
 (def Lvar<-stx (Program<-stx '(Fixnum Prim Var Let1 LetN)))
 
-#|
 ;; Need all dependencies defined at the right Phi:
 ;;(defsyntax (Lvar s) (datum->syntax s (Lvar<-sexp s)))
 

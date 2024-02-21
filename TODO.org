@@ -2,3 +2,8 @@
 *** TODO create a parser that parses from string/port/buffer to AST with actual location
 *** TODO get this match pattern to work! Open Gerbil issue!
 (check (match '(Int 4) (`(Int ,n) n)) => 4)
+
+*** TODO Some theory
+Values: universe of runtime values, big open sum of closed products?
+
+Languages: sets of values that describe a program

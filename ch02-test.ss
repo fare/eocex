@@ -1,12 +1,14 @@
 (import
   :std/sugar
   :std/test
-  ./ex
+  ./languages
+  ./primitives
   ./ch02)
 (export ch02-test)
 
 (def ch02-test
   (test-suite "ch02"
+    (void)
     #;
     (test-case "Lvar<-stx"
       (check (Lvar<-stx 42) => (Program #f '() (Fixnum #f 42)))

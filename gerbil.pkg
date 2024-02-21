@@ -1,2 +1,3 @@
 (package: eocex
- depend: ("github.com/mighty-gerbils/gerbil-utils"))
+ depend: ("github.com/mighty-gerbils/gerbil-utils"
+          "github.com/mighty-gerbils/gerbil-poo"))
